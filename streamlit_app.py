@@ -118,7 +118,7 @@ df, scores, mode, mode_note, need_scores = None, None, "", "", False
 if source.startswith("Simulated"):
     df, scores = _simulate(n_sim, int(seed_sim), interval)
     mode = "Synthetic"
-    mode_note = ("<b>Synthetic</b> data from the simulator (pH/CO₂/O₂/temperature curves with generated cupping scores). "
+    mode_note = ("<b>Synthetic</b> made data (pH/CO₂/O₂/temperature curves with generated cupping scores). "
                  "Used to build and test the model.")
 elif source.startswith("Upload"):
     if up_json is None:
@@ -140,11 +140,11 @@ else:
     df = C.make_pseudo_batches(df, n_chunks)
     scores = pd.Series(np.random.default_rng(0).uniform(70, 88, n_chunks).round(1), index=range(1, n_chunks + 1))
     mode = "Test mode"
-    mode_note = ("The sample file contains <b>one session</b> → split into pseudo batches with <b>random</b> scores. This only verifies "
+    mode_note = ("The sample file contains <b>one session</b> split into pseudo batches with <b>random</b> scores. This only verifies "
                  "that the code flow runs; model metrics here are not meaningful.")
 
 st.markdown(f'<div class="hero"><h1>☕ Coffee Fermentation Lab</h1>'
-            f'<p>Coffee taste prediction from fermentation sensors &nbsp;·&nbsp; Tabular ML vs deep learning sequence &nbsp;·&nbsp; '
+            f'<p>Coffee taste prediction from fermentation sensors &nbsp;·&nbsp: Tabular ML vs Deep Learning Sequence &nbsp;·&nbsp; '
             f'data mode: <b>{mode}</b></p></div>', unsafe_allow_html=True)
 st.markdown(f'<div class="note">{mode_note}</div>', unsafe_allow_html=True)
 st.write("")
