@@ -59,7 +59,7 @@ def run_experiment(batches: dict, ids: list, y: np.ndarray, cfg: dict, progress=
         rows.append({"Approach": "Reference" if "Baseline" in name else "Tabular", "Model": name, **r})
         oof_store[name] = oof; done += 1
     for arch in cfg["archs"]:
-        say(done / steps, f"Sequence cross-validation: {ARCH_LABEL[arch]} (longest step)")
+        say(done / steps, f"Sequence cross-validation: {ARCH_LABEL[arch]} ")
         fn = SM.make_pred_fn(arch, X, S, y, cfg["epochs"], seeds)
         r, oof = C.cv_evaluate(fn, y, splits, fpr, thr)
         rows.append({"Approach": "Deep Learning (sequence)", "Model": ARCH_LABEL[arch], **r})
