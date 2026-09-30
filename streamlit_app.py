@@ -144,7 +144,7 @@ else:
                  "that the code flow runs; model metrics here are not meaningful.")
 
 st.markdown(f'<div class="hero"><h1>☕ Coffee Fermentation Lab</h1>'
-            f'<p>Coffee taste prediction from fermentation sensors &nbsp;·&nbsp: Tabular ML vs Deep Learning Sequence &nbsp;·&nbsp; '
+            f'<p>Coffee Machine Learning Taste Prediction from Fermentation Sensors '
             f'data mode: <b>{mode}</b></p></div>', unsafe_allow_html=True)
 st.markdown(f'<div class="note">{mode_note}</div>', unsafe_allow_html=True)
 st.write("")
