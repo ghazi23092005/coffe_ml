@@ -1,6 +1,3 @@
-"""Orkestrasi eksperimen (dipakai bersama oleh CLI `run_compare.py` dan
-dashboard `streamlit_app.py`): siapkan data -> CV kedua pendekatan -> final fit
--> clustering -> prediksi batch baru."""
 import os
 import numpy as np
 import pandas as pd
@@ -16,7 +13,7 @@ import sequence_model as SM
 
 DEFAULT_CFG = {
     "threshold": C.GOOD_THRESHOLD, "repeats": 3, "epochs": 120, "seeds": 2,
-    "lr": 3e-3, "noise": 0.05, "k": None,                     # k=None -> otomatis (silhouette)
+    "lr": 3e-3, "noise": 0.05, "k": None,
     "tab_models": ["Ridge", "Random Forest", "Gradient Boosting"],
     "archs": ["gru", "cnn"],
     "tab_params": dict(TM.DEFAULT_TAB_PARAMS),
@@ -25,7 +22,6 @@ ARCH_LABEL = {"gru": "GRU", "cnn": "1D-CNN"}
 
 
 def prepare(df: pd.DataFrame, scores: pd.Series):
-    """Selaraskan batch sensor dengan skor cupping."""
     batches = C.split_batches(df)
     ids = [s for s in batches if s in scores.index and not pd.isna(scores.loc[s])]
     batches = {s: batches[s] for s in ids}
@@ -53,29 +49,29 @@ def run_experiment(batches: dict, ids: list, y: np.ndarray, cfg: dict, progress=
     seeds = tuple(range(cfg["seeds"]))
 
     all_tab = TM.get_models(**cfg["tab_params"])
-    tab_names = ["Baseline (rata-rata)"] + [m for m in cfg["tab_models"] if m in all_tab]
+    tab_names = ["Baseline (mean)"] + [m for m in cfg["tab_models"] if m in all_tab]
     steps = len(tab_names) + len(cfg["archs"]) + 2
     done, rows, oof_store = 0, [], {}
 
     for name in tab_names:
-        say(done / steps, f"Cross-validation tabular: {name}")
+        say(done / steps, f"Tabular cross-validation: {name}")
         r, oof = C.cv_evaluate(TM.make_pred_fn(all_tab[name], F, y), y, splits, fpr, thr)
-        rows.append({"Pendekatan": "Pembanding" if "Baseline" in name else "Tabular", "Model": name, **r})
+        rows.append({"Approach": "Reference" if "Baseline" in name else "Tabular", "Model": name, **r})
         oof_store[name] = oof; done += 1
     for arch in cfg["archs"]:
-        say(done / steps, f"Cross-validation sequence: {ARCH_LABEL[arch]} ")
+        say(done / steps, f"Sequence cross-validation: {ARCH_LABEL[arch]} (longest step)")
         fn = SM.make_pred_fn(arch, X, S, y, cfg["epochs"], seeds)
         r, oof = C.cv_evaluate(fn, y, splits, fpr, thr)
-        rows.append({"Pendekatan": "Deep Learning (sequence)", "Model": ARCH_LABEL[arch], **r})
+        rows.append({"Approach": "Deep Learning (sequence)", "Model": ARCH_LABEL[arch], **r})
         oof_store[ARCH_LABEL[arch]] = oof; done += 1
 
     res = pd.DataFrame(rows)
-    tab_rows = res[res["Pendekatan"] == "Tabular"]
-    seq_rows = res[res["Pendekatan"].str.startswith("Deep")]
+    tab_rows = res[res["Approach"] == "Tabular"]
+    seq_rows = res[res["Approach"].str.startswith("Deep")]
     best_tab = tab_rows.loc[tab_rows["MAE"].idxmin(), "Model"] if len(tab_rows) else None
     best_seq = seq_rows.loc[seq_rows["MAE"].idxmin(), "Model"] if len(seq_rows) else None
 
-    say(done / steps, "Melatih model final dengan semua batch"); done += 1
+    say(done / steps, "Training final model on all batches"); done += 1
     out = {"cfg": cfg, "ids": ids, "y": y, "F": F, "X": X, "S": S, "results": res, "oof": oof_store,
            "best_tab": best_tab, "best_seq": best_seq, "n": n,
            "cv_desc": "Leave-One-Out" if n < 10 else f"5-fold × {cfg['repeats']} repeat"}
@@ -87,7 +83,7 @@ def run_experiment(batches: dict, ids: list, y: np.ndarray, cfg: dict, progress=
     gru = out["seq_bundle"] if (best_seq == "GRU") else SM.fit_bundle(
         "gru", X, S, y, epochs=cfg["epochs"], seeds=seeds, lr=cfg["lr"], noise=cfg["noise"])
 
-    say(done / steps, "Clustering batch"); done += 1
+    say(done / steps, "Clustering batches"); done += 1
     Z_tab = StandardScaler().fit_transform(F)
     Z_seq = StandardScaler().fit_transform(SM.embed_bundle(gru, X, S))
     k_tab, lab_tab = _pick_k(Z_tab, cfg["k"]); k_seq, lab_seq = _pick_k(Z_seq, cfg["k"])
@@ -98,20 +94,19 @@ def run_experiment(batches: dict, ids: list, y: np.ndarray, cfg: dict, progress=
         out["ari"] = adjusted_rand_score(lab_tab, lab_seq)
         out["pca_tab"] = PCA(2, random_state=0).fit_transform(Z_tab)
         out["pca_seq"] = PCA(2, random_state=0).fit_transform(Z_seq)
-    say(1.0, "Selesai")
+    say(1.0, "Completed")
     return out
 
 
 def cluster_summary(clusters: pd.DataFrame, col: str, thr: float) -> pd.DataFrame:
     g = clusters.groupby(col)["score"].agg(["count", "mean", "std"]).rename(
-        columns={"count": "Jumlah batch", "mean": "Skor rata-rata", "std": "Std"})
-    g["% enak"] = clusters.groupby(col)["score"].apply(lambda s: 100 * (s >= thr).mean())
+        columns={"count": "Batch count", "mean": "Mean score", "std": "Std"})
+    g["% good"] = clusters.groupby(col)["score"].apply(lambda s: 100 * (s >= thr).mean())
     g.index.name = "Cluster"
     return g.round(1)
 
 
 def predict_batches(exp: dict, batches: dict) -> pd.DataFrame:
-    """Prediksi skor untuk batch baru dengan model tabular & sequence terbaik."""
     thr = exp["cfg"]["threshold"]
     F = TM.build_feature_table(batches)
     X, S, ids = SM.batches_to_tensor(batches)
@@ -121,9 +116,9 @@ def predict_batches(exp: dict, batches: dict) -> pd.DataFrame:
         c = f"Tabular · {exp['best_tab']}"; out[c] = exp["tab_model"].predict(F); cols.append(c)
     if exp["seq_bundle"] is not None:
         c = f"Sequence · {exp['best_seq']}"; out[c] = SM.predict_bundle(exp["seq_bundle"], X, S); cols.append(c)
-    out["Rata-rata"] = out[cols].mean(axis=1)
-    out["Selisih model"] = out[cols].max(axis=1) - out[cols].min(axis=1)
-    out["Prediksi"] = np.where(out["Rata-rata"] >= thr, "Enak", "Kurang")
+    out["Average"] = out[cols].mean(axis=1)
+    out["Model difference"] = out[cols].max(axis=1) - out[cols].min(axis=1)
+    out["Prediction"] = np.where(out["Average"] >= thr, "Good", "Poor")
     return out
 
 
