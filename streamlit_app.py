@@ -54,7 +54,7 @@ def show(fig):
 
 
 def badge(pred):
-    return f'<span class="badge {"badge-good" if pred == "Enak" else "badge-bad"}">{"Good" if pred == "Enak" else "Not Good"}</span>'
+    return f'<span class="badge {"badge-good" if pred == "Good" else "badge-bad"}">{"Good" if pred == "Good" else "Not Good"}</span>'
 
 
 def empty_state(msg="Click **▶ Run training** in the sidebar to see this section."):
@@ -118,7 +118,7 @@ df, scores, mode, mode_note, need_scores = None, None, "", "", False
 if source.startswith("Simulated"):
     df, scores = _simulate(n_sim, int(seed_sim), interval)
     mode = "Synthetic"
-    mode_note = ("<b>Synthetic</b> made data (pH/CO₂/O₂/temperature curves with generated cupping scores). "
+    mode_note = ("<b>Synthetic</b> data from the simulator (pH/CO₂/O₂/temperature curves with generated cupping scores). "
                  "Used to build and test the model.")
 elif source.startswith("Upload"):
     if up_json is None:
@@ -140,11 +140,11 @@ else:
     df = C.make_pseudo_batches(df, n_chunks)
     scores = pd.Series(np.random.default_rng(0).uniform(70, 88, n_chunks).round(1), index=range(1, n_chunks + 1))
     mode = "Test mode"
-    mode_note = ("The sample file contains <b>one session</b> split into pseudo batches with <b>random</b> scores. This only verifies "
+    mode_note = ("The sample file contains <b>one session</b> → split into pseudo batches with <b>random</b> scores. This only verifies "
                  "that the code flow runs; model metrics here are not meaningful.")
 
 st.markdown(f'<div class="hero"><h1>☕ Coffee Fermentation Lab</h1>'
-            f'<p>Coffee Machine Learning Taste Prediction from Fermentation Sensors '
+            f'<p>Coffee taste prediction from fermentation sensors &nbsp;·&nbsp; Tabular ML vs deep learning sequence &nbsp;·&nbsp; '
             f'data mode: <b>{mode}</b></p></div>', unsafe_allow_html=True)
 st.markdown(f'<div class="note">{mode_note}</div>', unsafe_allow_html=True)
 st.write("")
@@ -262,7 +262,7 @@ with t_cmp:
         empty_state()
     else:
         res, R = exp["results"], exp["results"].set_index("Model")
-        base = R.loc["Baseline (rata-rata)", "MAE"]
+        base = R.loc["Baseline (mean)", "MAE"]
         thr_e = exp["cfg"]["threshold"]
         st.subheader("Which model performs better?")
         c = st.columns(3)
@@ -294,7 +294,7 @@ with t_cmp:
             st.caption(f"Data mode **{mode}**: this comparison tests the pipeline, not which approach is better for real coffee.")
 
         st.write("")
-        cols = ["Pendekatan", "Model", "MAE", "MAE_std", "RMSE", "R2", "Acc_enak", "F1_enak"]
+        cols = ["Approach", "Model", "MAE", "MAE_std", "RMSE", "R2", "Acc_enak", "F1_enak"]
         styled = (res[cols].style.format({c_: "{:.2f}" for c_ in cols[2:]})
                   .highlight_min(subset=["MAE", "RMSE"], color="#EAD7C3").highlight_max(subset=["R2", "Acc_enak", "F1_enak"], color="#EAD7C3"))
         st.dataframe(styled, hide_index=True, width="stretch")
@@ -367,7 +367,7 @@ with t_clu:
                 st.dataframe(P.cluster_summary(cl, key, thr_e), width="stretch")
                 show(PL.cluster_mean_curves(exp["X"], cl[key].values))
         st.markdown('<div class="note">The GRU embedding is trained using cupping scores, so its clusters tend to follow the score '
-                    '(semi-supervised). Tabular clusters are based purely on sensor patterns without seeing the score more honest for '
+                    '(semi-supervised). Tabular clusters are based purely on sensor patterns without seeing the score — more honest for '
                     'finding "fermentation types", but not necessarily aligned with taste.</div>', unsafe_allow_html=True)
         with st.expander("Cluster assignment per batch"):
             st.dataframe(cl, hide_index=True, width="stretch")
@@ -401,10 +401,10 @@ with t_pred:
                 c[0].markdown(kpi("Batch", s, f"{len(new_batches[s])} samples"), unsafe_allow_html=True)
                 for i, pc in enumerate(pred_cols):
                     c[1 + i].markdown(kpi(pc.replace(" · ", " — "), f"{r[pc]:.1f}", "predicted cupping score"), unsafe_allow_html=True)
-                c[3].markdown(kpi("Average of both models", f"{r['Rata-rata']:.1f}", f"difference {r['Selisih model']:.1f} points"), unsafe_allow_html=True)
-                c[4].markdown(kpi("Prediction", badge(r["Prediksi"]), f"threshold ≥ {exp['cfg']['threshold']:.0f}"), unsafe_allow_html=True)
-                if r["Selisih model"] > 3:
-                    st.caption(f"Batch {s}: the two models differ by more than 3 points treat this prediction with caution.")
+                c[3].markdown(kpi("Average of both models", f"{r['Average']:.1f}", f"difference {r['Model difference']:.1f} points"), unsafe_allow_html=True)
+                c[4].markdown(kpi("Prediction", badge(r["Prediction"]), f"threshold ≥ {exp['cfg']['threshold']:.0f}"), unsafe_allow_html=True)
+                if r["Model difference"] > 3:
+                    st.caption(f"Batch {s}: the two models differ by more than 3 points — treat this prediction with caution.")
                 st.write("")
             show(PL.predicted_curves(new_batches, list(new_batches)[:8]))
             with st.expander("Prediction table"):
@@ -414,5 +414,5 @@ with t_pred:
             st.caption("Upload a new batch JSON file to get predictions from both models.")
 
 st.markdown("---")
-st.caption("☕ Coffee Fermentation Lab : Tabular ML & Deep Learning Sequence "
+st.caption("☕ Coffee Fermentation Lab · Tabular ML (scikit-learn) + deep learning sequence (PyTorch) · "
            "Synthetic / test-mode data is only for building and testing the model.")
