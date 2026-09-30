@@ -1,5 +1,4 @@
-"""Prediksi batch baru dari model tersimpan:
-  python predict_new.py --data batch_baru.json --models results/models [--interval-min 30]"""
+
 import argparse
 import common as C, pipeline as P
 ap = argparse.ArgumentParser()
