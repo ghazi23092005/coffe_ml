@@ -414,5 +414,5 @@ with t_pred:
             st.caption("Upload a new batch JSON file to get predictions from both models.")
 
 st.markdown("---")
-st.caption("☕ Coffee Fermentation Lab : Tabular ML & Deep Learning Sequence · "
+st.caption("☕ Coffee Fermentation Lab : Tabular ML & Deep Learning Sequence "
            "Synthetic / test-mode data is only for building and testing the model.")
