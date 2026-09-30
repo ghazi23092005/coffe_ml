@@ -1,6 +1,3 @@
-"""Pendekatan 1 — ML TABULAR: ringkas tiap batch jadi fitur (berbasis JAM,
-bukan 'per sampel'), lalu Ridge / Random Forest / Gradient Boosting.
-Scaler ada di dalam Pipeline sehingga tidak bocor saat cross-validation."""
 import numpy as np
 import pandas as pd
 from sklearn.pipeline import make_pipeline
@@ -31,9 +28,9 @@ def batch_features(g: pd.DataFrame) -> dict:
         "duration_h": dur,
         "ph_start": ph[:3].mean(), "ph_end": ph[-3:].mean(),
         "ph_drop": ph[:3].mean() - ph[-3:].mean(),
-        "ph_max_drop_rate": float(-dph.min()),                # pH turun tercepat (per jam)
+        "ph_max_drop_rate": float(-dph.min()),
         "t_ph_below_5_h": float(t[below5[0]] - t[0]) if len(below5) else dur,
-        "h_ph_below_4": float(step * np.sum(ph < 4.0)),       # jam di zona over-fermentasi
+        "h_ph_below_4": float(step * np.sum(ph < 4.0)),
         "co2_start": co2[:3].mean(), "co2_max": co2.max(),
         "co2_rise": co2.max() - co2[:3].mean(), "co2_mean": co2.mean(),
         "o2_min": o2.min(), "o2_drop": o2[:3].mean() - o2.min(),
@@ -51,7 +48,7 @@ DEFAULT_TAB_PARAMS = {"rf_trees": 300, "rf_depth": 6, "gb_trees": 150, "gb_depth
 
 def get_models(rf_trees=300, rf_depth=6, gb_trees=150, gb_depth=2, gb_lr=0.05) -> dict:
     return {
-        "Baseline (rata-rata)": DummyRegressor(strategy="mean"),
+        "Baseline (mean)": DummyRegressor(strategy="mean"),
         "Ridge": make_pipeline(StandardScaler(), RidgeCV(alphas=np.logspace(-2, 3, 30))),
         "Random Forest": make_pipeline(StandardScaler(), RandomForestRegressor(
             n_estimators=rf_trees, max_depth=rf_depth, min_samples_leaf=2, random_state=42, n_jobs=1)),
@@ -60,20 +57,19 @@ def get_models(rf_trees=300, rf_depth=6, gb_trees=150, gb_depth=2, gb_lr=0.05) -
     }
 
 
-# Deskripsi fitur (dipakai dashboard)
 FEATURE_INFO = {
-    "duration_h": "Lama fermentasi (jam)",
-    "ph_start": "pH awal (rata-rata 3 titik pertama)",
-    "ph_end": "pH akhir (rata-rata 3 titik terakhir)",
-    "ph_drop": "Total penurunan pH",
-    "ph_max_drop_rate": "Laju penurunan pH tercepat (pH/jam)",
-    "t_ph_below_5_h": "Jam sampai pH turun ≤ 5.0",
-    "h_ph_below_4": "Jam pH < 4.0 (indikator over-fermentasi)",
-    "co2_start": "CO₂ awal (ppm)", "co2_max": "CO₂ puncak (ppm)",
-    "co2_rise": "Kenaikan CO₂ (ppm)", "co2_mean": "CO₂ rata-rata (ppm)",
-    "o2_min": "O₂ minimum (%)", "o2_drop": "Penurunan O₂ (%)",
-    "temp_mean": "Suhu rata-rata (°C)", "temp_std": "Variasi suhu (std)", "temp_max": "Suhu maksimum (°C)",
-    "rh_mean": "Kelembapan rata-rata (%)", "rh_std": "Variasi kelembapan (std)",
+    "duration_h": "Fermentation duration (hours)",
+    "ph_start": "Initial pH (mean of first 3 points)",
+    "ph_end": "Final pH (mean of last 3 points)",
+    "ph_drop": "Total pH decrease",
+    "ph_max_drop_rate": "Fastest pH drop rate (pH/hour)",
+    "t_ph_below_5_h": "Hours until pH drops to ≤ 5.0",
+    "h_ph_below_4": "Hours with pH < 4.0 (over-fermentation indicator)",
+    "co2_start": "Initial CO₂ (ppm)", "co2_max": "Peak CO₂ (ppm)",
+    "co2_rise": "CO₂ increase (ppm)", "co2_mean": "Mean CO₂ (ppm)",
+    "o2_min": "Minimum O₂ (%)", "o2_drop": "O₂ decrease (%)",
+    "temp_mean": "Mean temperature (°C)", "temp_std": "Temperature variation (std)", "temp_max": "Maximum temperature (°C)",
+    "rh_mean": "Mean humidity (%)", "rh_std": "Humidity variation (std)",
 }
 
 
