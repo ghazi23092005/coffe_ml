@@ -1,10 +1,3 @@
-"""CLI: bandingkan ML tabular vs Deep Learning sequence (+clustering), simpan hasil.
-
-  python run_compare.py --simulate 60
-  python run_compare.py --data fermentor_samples_simulated.json          # 1 sesi -> TEST MODE
-  python run_compare.py --data real.json --scores cupping.csv            # data asli
-Untuk antarmuka interaktif:  streamlit run streamlit_app.py
-"""
 import argparse, os
 import numpy as np, pandas as pd
 import common as C, sim_data, pipeline as P, plots as PL
@@ -20,26 +13,26 @@ if a.simulate or not a.data:
     df, scores = sim_data.simulate_batches(a.simulate or 60, seed=0, interval_min=a.interval_min)
     df.to_json(f"{a.out}/simulated_batches.json", orient="records")
     scores.rename_axis("session").reset_index().to_csv(f"{a.out}/simulated_scores.csv", index=False)
-    mode = "SINTETIS"
+    mode = "SYNTHETIC"
 else:
     df = C.load_data(a.data, a.interval_min)
     if df["session"].nunique() < 2:
         df = C.make_pseudo_batches(df, 5)
         scores = pd.Series(np.random.default_rng(0).uniform(70, 88, df["session"].nunique()).round(1),
                            index=sorted(df["session"].unique()))
-        mode = "TEST MODE (skor acak)"
+        mode = "TEST MODE (random scores)"
     else:
-        scores, mode = C.load_scores(a.scores), "DATA ASLI"
+        scores, mode = C.load_scores(a.scores), "REAL DATA"
 
 batches, ids, y = P.prepare(df, scores)
-print(f"Mode: {mode} | batch berlabel: {len(ids)}")
+print(f"Mode: {mode} | labeled batches: {len(ids)}")
 exp = P.run_experiment(batches, ids, y, {"epochs": a.epochs, "seeds": a.seeds, "repeats": a.repeats},
                        progress=lambda f, m: print(f"  [{f:4.0%}] {m}", flush=True))
 res, thr = exp["results"], exp["cfg"]["threshold"]
-cols = ["Pendekatan", "Model", "MAE", "MAE_std", "RMSE", "R2", "Acc_enak", "F1_enak"]
+cols = ["Approach", "Model", "MAE", "MAE_std", "RMSE", "R2", "Acc_enak", "F1_enak"]
 res[cols].to_csv(f"{a.out}/comparison.csv", index=False)
-print(f"\n=== HASIL CV ({exp['cv_desc']}) ===\n{res[cols].round(3).to_string(index=False)}")
-print(f"\nTerbaik tabular: {exp['best_tab']} | terbaik sequence: {exp['best_seq']}")
+print(f"\n=== CV RESULTS ({exp['cv_desc']}) ===\n{res[cols].round(3).to_string(index=False)}")
+print(f"\nBest tabular: {exp['best_tab']} | best sequence: {exp['best_seq']}")
 if exp["k_tab"]:
     for col in ["cluster_tabular", "cluster_sequence"]:
         print(f"\n{col}:\n{P.cluster_summary(exp['clusters'], col, thr).to_string()}")
@@ -51,4 +44,4 @@ R = res.set_index("Model")
 for nm, tag in [(exp["best_tab"], "tabular"), (exp["best_seq"], "sequence")]:
     PL.pred_vs_actual(y, exp["oof"][nm], nm, R.loc[nm, "MAE"], R.loc[nm, "R2"], thr).savefig(f"{a.out}/pred_{tag}.png", dpi=130)
 PL.mae_bars(res).savefig(f"{a.out}/mae_bars.png", dpi=130)
-print(f"\nSelesai. Output: {a.out}/")
+print(f"\nCompleted. Output: {a.out}/")
