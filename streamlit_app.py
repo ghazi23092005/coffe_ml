@@ -118,7 +118,7 @@ df, scores, mode, mode_note, need_scores = None, None, "", "", False
 if source.startswith("Simulated"):
     df, scores = _simulate(n_sim, int(seed_sim), interval)
     mode = "Synthetic"
-    mode_note = ("<b>Synthetic</b> data from the simulator (pH/CO₂/O₂/temperature curves with generated cupping scores). "
+    mode_note = ("<b>Synthetic</b> made data (pH/CO₂/O₂/temperature curves with generated cupping scores). "
                  "Used to build and test the model.")
 elif source.startswith("Upload"):
     if up_json is None:
@@ -144,7 +144,7 @@ else:
                  "that the code flow runs; model metrics here are not meaningful.")
 
 st.markdown(f'<div class="hero"><h1>☕ Coffee Fermentation Lab</h1>'
-            f'<p>Coffee taste prediction from fermentation sensors &nbsp;·&nbsp; Tabular ML vs deep learning sequence &nbsp;·&nbsp; '
+            f'<p>Coffee ML taste prediction from fermentation sensors &nbsp;&nbsp; &nbsp;&nbsp; '
             f'data mode: <b>{mode}</b></p></div>', unsafe_allow_html=True)
 st.markdown(f'<div class="note">{mode_note}</div>', unsafe_allow_html=True)
 st.write("")
@@ -414,5 +414,5 @@ with t_pred:
             st.caption("Upload a new batch JSON file to get predictions from both models.")
 
 st.markdown("---")
-st.caption("☕ Coffee Fermentation Lab · Tabular ML (scikit-learn) + deep learning sequence (PyTorch) · "
+st.caption("☕ Coffee Fermentation Lab ML & Deep Learning Sequence · "
            "Synthetic / test-mode data is only for building and testing the model.")
