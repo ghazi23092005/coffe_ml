@@ -145,7 +145,7 @@ else:
 
 st.markdown(f'<div class="hero"><h1>☕ Coffee Fermentation Lab</h1>'
             f'<p>Coffee ML taste prediction from fermentation sensors &nbsp;&nbsp; &nbsp;&nbsp; '
-            f'data mode: <b>{mode}</b></p></div>', unsafe_allow_html=True)
+            f'Data Mode: <b>{mode}</b></p></div>', unsafe_allow_html=True)
 st.markdown(f'<div class="note">{mode_note}</div>', unsafe_allow_html=True)
 st.write("")
 
