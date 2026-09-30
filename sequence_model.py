@@ -1,7 +1,3 @@
-"""Pendekatan 2 — DEEP LEARNING SEQUENCE: tiap batch = deret waktu multivariat
-(pH, O2, CO2, suhu, RH + laju perubahan pH & CO2) di-resample ke panjang tetap
-pada sumbu waktu ternormalisasi 0..1; durasi asli masuk sebagai fitur statis.
-Arsitektur kecil (GRU / 1D-CNN) karena batch masih sedikit."""
 import numpy as np
 import pandas as pd
 import torch
@@ -10,11 +6,10 @@ from common import SENSOR_COLS
 
 torch.set_num_threads(1)
 T_STEPS = 32
-N_CHANNELS = len(SENSOR_COLS) + 2      # + dpH/dt, dCO2/dt
+N_CHANNELS = len(SENSOR_COLS) + 2
 
 
 def batches_to_tensor(batches: dict):
-    """-> X (N, T, C) float32, S (N, 1) float32 [durasi jam], sessions (list)."""
     grid = np.linspace(0, 1, T_STEPS)
     X, S, ids = [], [], []
     for s, g in batches.items():
@@ -23,7 +18,7 @@ def batches_to_tensor(batches: dict):
         u = (t - t[0]) / dur
         ch = [np.interp(grid, u, g[c].values.astype(float)) for c in SENSOR_COLS]
         hours = grid * dur
-        d_ph = np.gradient(ch[1], hours)          # per jam
+        d_ph = np.gradient(ch[1], hours)
         d_co2 = np.gradient(ch[2], hours)
         X.append(np.stack(ch + [d_ph, d_co2], axis=1))
         S.append([dur]); ids.append(s)
@@ -63,8 +58,6 @@ def _build(arch, n_static=1):
 
 def fit_bundle(arch, X, S, y, epochs=120, seeds=(0, 1), lr=3e-3, wd=1e-2,
                bs=16, noise=0.05, offset=0.1):
-    """Latih ensemble kecil (beberapa seed). Return 'bundle' berisi semua yang
-    dibutuhkan untuk prediksi (bobot + statistik normalisasi)."""
     xm, xs = X.mean((0, 1)), np.maximum(X.std((0, 1)), 1e-3)
     sm, ss = S.mean(0), np.maximum(S.std(0), 1e-3)
     ym, ys = float(y.mean()), float(max(y.std(), 1e-3))
@@ -83,10 +76,10 @@ def fit_bundle(arch, X, S, y, epochs=120, seeds=(0, 1), lr=3e-3, wd=1e-2,
             ep_loss, ep_n = 0.0, 0
             for i in range(0, n, bs):
                 idx = perm[i:i + bs]
-                if len(idx) < 2:              # BatchNorm-free, tapi hindari batch 1 saat dropout
+                if len(idx) < 2:
                     continue
                 xb = Xn[idx] + noise * torch.randn_like(Xn[idx]) \
-                     + offset * torch.randn(len(idx), 1, N_CHANNELS)   # augmentasi: noise + drift kalibrasi
+                     + offset * torch.randn(len(idx), 1, N_CHANNELS)
                 loss = nn.functional.smooth_l1_loss(model(xb, Sn[idx]), yn[idx])
                 opt.zero_grad(); loss.backward(); opt.step()
                 ep_loss += float(loss.detach()) * len(idx); ep_n += len(idx)
@@ -115,7 +108,6 @@ def predict_bundle(bundle, X, S):
 
 
 def embed_bundle(bundle, X, S):
-    """Representasi tersembunyi tiap batch (dipakai untuk clustering)."""
     Xn, _ = _norm(bundle, X, S)
     with torch.no_grad():
         return _load(bundle, 0).hidden(Xn).numpy()
