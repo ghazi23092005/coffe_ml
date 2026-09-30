@@ -63,7 +63,7 @@ def run_experiment(batches: dict, ids: list, y: np.ndarray, cfg: dict, progress=
         rows.append({"Pendekatan": "Pembanding" if "Baseline" in name else "Tabular", "Model": name, **r})
         oof_store[name] = oof; done += 1
     for arch in cfg["archs"]:
-        say(done / steps, f"Cross-validation sequence: {ARCH_LABEL[arch]} (paling lama)")
+        say(done / steps, f"Cross-validation sequence: {ARCH_LABEL[arch]} ")
         fn = SM.make_pred_fn(arch, X, S, y, cfg["epochs"], seeds)
         r, oof = C.cv_evaluate(fn, y, splits, fpr, thr)
         rows.append({"Pendekatan": "Deep Learning (sequence)", "Model": ARCH_LABEL[arch], **r})
